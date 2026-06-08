@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LEDLINK - Kiếm Tiền Vượt Link</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #0b0f19; --bg-card: #151c2c; --bg-input: #1e2640;
+            --text-main: #f3f4f6; --text-muted: #9ca3af;
+            --led-color: linear-gradient(90deg, #ff007f, #7f00ff, #00f0ff, #ff007f);
+            --primary: #8b5cf6; --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
+        
+        /* VIỀN LED RGB CHẠY */
+        .top-led-bar { height: 4px; width: 100%; background: var(--led-color); background-size: 300% 100%; animation: led-flow 5s linear infinite; position: fixed; top: 0; left: 0; z-index: 1000; }
+        @keyframes led-flow { 0% { background-position: 0% 50%; } 100% { background-position: 300% 50%; } }
+
+        /* AUTH MODAL */
+        .auth-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11,15,25,0.98); z-index: 2000; display: flex; justify-content: center; align-items: center; }
+        .auth-card { background: var(--bg-card); padding: 2.5rem; border-radius: 16px; width: 100%; max-width: 420px; position: relative; box-shadow: 0 0 30px rgba(139,92,246,0.2); }
+        .auth-card::before { content: ''; position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px; background: var(--led-color); background-size: 300% 100%; animation: led-flow 5s linear infinite; border-radius: 18px; z-index: -1; }
+        .auth-tabs { display: flex; margin-bottom: 2rem; border-bottom: 1px solid var(--bg-input); }
+        .auth-tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; color: var(--text-muted); font-weight: 600; }
+        .auth-tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-muted); }
+        .form-control { width: 100%; padding: 0.75rem 1rem; background: var(--bg-input); border: 1px solid transparent; border-radius: 8px; color: white; outline: none; }
+        .form-control:focus { border-color: var(--primary); }
+        .form-control:disabled { background: #131a2e; color: #6b7280; cursor: not-allowed; }
+        .btn-submit { width: 100%; padding: 0.75rem; background: linear-gradient(135deg, #8b5cf6, #6d28d9); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; }
+
+        /* HEADER & SIDEBAR */
+        header { position: fixed; top: 4px; left: 0; width: 100%; height: 60px; background: var(--bg-card); display: flex; justify-content: space-between; align-items: center; padding: 0 2rem; z-index: 900; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .sidebar { position: fixed; top: 64px; left: -280px; width: 280px; height: calc(100vh - 64px); background: var(--bg-card); z-index: 950; transition: 0.3s; box-shadow: 5px 0 15px rgba(0,0,0,0.5); }
+        .sidebar.open { left: 0; }
+        .sidebar-item { padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; color: var(--text-muted); cursor: pointer; transition: 0.3s; }
+        .sidebar-item:hover, .sidebar-item.active { color: white; background: rgba(139,92,246,0.1); border-left: 4px solid var(--primary); }
+
+        main { margin-top: 84px; padding: 2rem; max-width: 1200px; margin-left: auto; margin-right: auto; }
+        .main-page { display: none; }
+        .main-page.active-page { display: block; }
+        .card { background: var(--bg-card); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.03); }
+        
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+        .stat-box { background: var(--bg-input); padding: 1.5rem; border-radius: 10px; text-align: center; border-bottom: 3px solid var(--primary); }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 0.75rem; border-bottom: 1px solid var(--bg-input); text-align: left; }
+        
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; }
+        .status-tuchoi { background: rgba(239,68,68,0.2); color: var(--danger); }
+        .status-pheduyet { background: rgba(245,158,11,0.2); color: var(--warning); }
+        .status-hoanthanh { background: rgba(16,185,129,0.2); color: var(--success); }
+
+        .chat-box { height: 300px; background: var(--bg-input); border-radius: 8px; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
+        .chat-msg { background: var(--bg-card); padding: 0.5rem 1rem; border-radius: 8px; max-width: 80%; align-self: flex-start; }
+        .chat-msg.me { background: var(--primary); align-self: flex-end; }
+        
+        .btn-action { padding: 0.6rem 1.2rem; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; }
+        .admin-only { display: none; border: 1px dashed var(--danger) !important; }
+    </style>
+</head>
+<body>
+    <div class="top-led-bar"></div>
+
+    <div class="auth-container" id="authContainer">
+        <div class="auth-card">
+            <div class="auth-tabs">
+                <div class="auth-tab active" id="tabLogin" onclick="toggleAuth('login')">ĐĂNG NHẬP</div>
+                <div class="auth-tab" id="tabRegister" onclick="toggleAuth('register')">ĐĂNG KÝ</div>
+            </div>
+            <form id="authForm" onsubmit="handleAuth(event)">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="authEmail" class="form-control" required>
+                </div>
+                <div class="form-group" id="regFields" style="display:none;">
+                    <label>Số điện thoại (Chỉ nhập 1 lần duy nhất)</label>
+                    <input type="tel" id="authPhone" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Mật khẩu</label>
+                    <input type="password" id="authPassword" class="form-control" required>
+                </div>
+                <button type="submit" class="btn-submit" id="authBtn">Đăng Nhập</button>
+            </form>
+        </div>
+    </div>
+
+    <header>
+        <div>
+            <button style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;" onclick="document.getElementById('sidebar').classList.toggle('open')"><i class="fa-solid fa-bars"></i></button>
+            <span style="font-weight:700; margin-left:1rem; color: var(--primary);">LEDLINK SYSTEM</span>
+        </div>
+        <div>
+            <span id="userDisplay" style="margin-right: 1rem; font-weight:600;"></span>
+            <button onclick="logout()" style="background:none; border:none; color:var(--danger); cursor:pointer;"><i class="fa-solid fa-sign-out"></i> Đăng xuất</button>
+        </div>
+    </header>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-item active" onclick="showPage('dashboard', this)"><i class="fa-solid fa-home"></i> Bảng điều khiển</div>
+        <div class="sidebar-item" onclick="showPage('profile', this)"><i class="fa-solid fa-user"></i> Thông tin tài khoản</div>
+        <div class="sidebar-item" onclick="showPage('earn', this)"><i class="fa-solid fa-link"></i> Vượt link kiếm tiền</div>
+        <div class="sidebar-item" onclick="showPage('withdraw', this)"><i class="fa-solid fa-wallet"></i> Rút tiền</div>
+        <div class="sidebar-item" onclick="showPage('referral', this)"><i class="fa-solid fa-gift"></i> Giới thiệu bạn bè</div>
+        <div class="sidebar-item" onclick="showPage('chat', this)"><i class="fa-solid fa-comments"></i> Chat chung</div>
+        <div class="sidebar-item admin-only" onclick="showPage('admin-panel', this)" style="color: var(--danger); font-weight:700;"><i class="fa-solid fa-user-shield"></i> QUẢN TRỊ ADMIN</div>
+    </nav>
+
+    <main>
+        <div id="page-dashboard" class="main-page active-page">
+            <div class="card" style="border-left: 4px solid var(--warning);">
+                <h3 style="color:var(--warning)"><i class="fa-solid fa-bullhorn"></i> Thông báo từ Admin</h3>
+                <p id="adminNoticeText" style="margin-top:0.5rem;">Hệ thống bảo mật phân quyền tối cao đã kích hoạt. Nghiêm cấm mọi hành vi gian lận.</p>
+            </div>
+            <div class="grid-3">
+                <div class="stat-box"><h4>Số link đã vượt</h4><h2 id="statLinks" style="color:var(--primary)">0</h2></div>
+                <div class="stat-box"><h4>Số tiền kiếm được</h4><h2 id="statMoney" style="color:var(--success)">0đ</h2></div>
+                <div class="stat-box"><h4>Hoa hồng (3%)</h4><h2 id="statRefMoney" style="color:var(--warning)">0đ</h2></div>
+            </div>
+            <div class="card" style="margin-top:1.5rem;">
+                <h3>Thống kê thu nhập theo ngày</h3>
+                <table>
+                    <thead><tr><th>Ngày</th><th>Số Link</th><th>Thu nhập chính</th><th>Tổng nhận</th></tr></thead>
+                    <tbody id="dailyStatsTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="page-profile" class="main-page">
+            <div class="card" style="max-width:600px; margin:0 auto;">
+                <h3><i class="fa-solid fa-user-cog"></i> Thông tin cá nhân & Rút tiền</h3>
+                <p style="font-size:0.8rem; color:var(--danger); margin-bottom:1rem;">* Lưu ý: Email, SĐT và ngân hàng không thể tự sửa sau khi lưu, phải liên hệ Admin duyệt.</p>
+                <div class="form-group">
+                    <label>Email đăng ký</label>
+                    <input type="text" id="profileEmail" class="form-control" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Số điện thoại</label>
+                    <input type="text" id="profilePhone" class="form-control" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Thông tin Ngân hàng / Ví nhận tiền</label>
+                    <textarea id="profileBank" class="form-control" rows="3" placeholder="Ví dụ: MB Bank - 123456789 - NGUYEN VAN A"></textarea>
+                </div>
+                <button class="btn-action" id="btnSaveProfile" onclick="saveProfile()">Lưu thông tin rút tiền</button>
+            </div>
+        </div>
+
+        <div id="page-earn" class="main-page">
+            <div class="card">
+                <h3><i class="fa-solid fa-bolt"></i> Nhiệm vụ Vượt Link</h3>
+                <table>
+                    <thead><tr><th>Tên Link</th><th>Giá Tiền</th><th>Hành động</th></tr></thead>
+                    <tbody id="linksTable"></tbody>
+                </table>
+            </div>
+            <div class="card" id="boxSubmitCode" style="display:none; max-width:500px;">
+                <h4>Nhập mã xác thực để nhận tiền</h4>
+                <div class="form-group" style="margin-top:1rem;">
+                    <input type="text" id="verificationCodeInput" class="form-control" placeholder="Dán mã nhận được từ link vào đây...">
+                </div>
+                <button class="btn-action" onclick="submitVerifyCode()">Xác nhận nhận tiền</button>
+            </div>
+        </div>
+
+        <div id="page-withdraw" class="main-page">
+            <div class="card" style="max-width:500px;">
+                <h3><i class="fa-solid fa-money-bill-wave"></i> Yêu cầu rút tiền</h3>
+                <div class="form-group" style="margin-top:1rem;">
+                    <label>Số tiền rút (Tối thiểu 5.000đ)</label>
+                    <input type="number" id="withdrawAmount" class="form-control" min="5000" placeholder="Ví dụ: 20000">
+                </div>
+                <button class="btn-action" onclick="requestWithdraw()">Gửi lệnh rút tiền</button>
+            </div>
+            <div class="card">
+                <h3>Lịch sử rút tiền</h3>
+                <table>
+                    <thead><tr><th>Mã Lệnh</th><th>Số Tiền</th><th>Trạng thái</th></tr></thead>
+                    <tbody id="withdrawHistoryTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="page-referral" class="main-page">
+            <div class="card">
+                <h3><i class="fa-solid fa-users"></i> Hệ thống Tiếp thị liên kết (Nhận 3% trọn đời)</h3>
+                <p style="margin: 1rem 0; color:var(--text-muted)">Khi bạn bè bạn giới thiệu vượt link thành công, hệ thống tự động cộng thêm 3% số tiền thưởng của họ cho bạn.</p>
+                <div class="form-group">
+                    <label>Đường dẫn giới thiệu của bạn:</label>
+                    <input type="text" id="refLinkInput" class="form-control" readonly>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-chat" class="main-page">
+            <div class="card" style="max-width:700px; margin: 0 auto;">
+                <div style="display:flex; justify-content:space-between;">
+                    <h3><i class="fa-solid fa-messages"></i> Phòng chat cộng đồng</h3>
+                    <span style="color:var(--danger); font-size:0.8rem;"><i class="fa-solid fa-shield"></i> Nghiêm cấm chat bậy</span>
+                </div>
+                <div class="chat-box" id="chatBox"></div>
+                <div style="display:flex; gap:0.5rem;">
+                    <input type="text" id="chatInput" class="form-control" placeholder="Nhập tin nhắn văn minh...">
+                    <button class="btn-action" onclick="sendChat()"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-admin-panel" class="main-page admin-only">
+            <div class="card">
+                <h3><i class="fa-solid fa-edit"></i> Đổi thông báo Admin</h3>
+                <div style="display:flex; gap:0.5rem; margin-top:1rem;">
+                    <input type="text" id="inputNewNotice" class="form-control" placeholder="Nội dung thông báo mới...">
+                    <button class="btn-action" onclick="updateNotice()">Cập nhật</button>
+                </div>
+            </div>
+            <div class="card">
+                <h3><i class="fa-solid fa-plus"></i> Thêm Link Rút Gọn Mới</h3>
+                <div class="grid-3" style="margin-top:1rem;">
+                    <input type="text" id="adminLinkTitle" class="form-control" placeholder="Tên Link (VD: Tải File Mod GTA V)">
+                    <input type="text" id="adminLinkUrl" class="form-control" placeholder="URL gốc rút gọn">
+                    <input type="text" id="adminLinkCode" class="form-control" placeholder="Mã bí mật gán cho link">
+                    <input type="number" id="adminLinkPrice" class="form-control" placeholder="Giá tiền nhận được">
+                </div>
+                <button class="btn-action" style="margin-top:1rem;" onclick="addLinkByAdmin()">Thêm Link</button>
+            </div>
+            <div class="card">
+                <h3><i class="fa-solid fa-hand-holding-dollar"></i> Quản lý phê duyệt rút tiền</h3>
+                <table>
+                    <thead><tr><th>User</th><th>Số Tiền</th><th>Thông tin Bank</th><th>Hành động</th></tr></thead>
+                    <tbody id="adminWithdrawTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentUser = null;
+        let authMode = 'login';
+        let activeTaskId = null;
+        const API_URL = window.location.origin;
+
+        function toggleAuth(mode) {
+            authMode = mode;
+            document.getElementById('tabLogin').classList.toggle('active', mode === 'login');
+            document.getElementById('tabRegister').classList.toggle('active', mode === 'register');
+            document.getElementById('regFields').style.display = mode === 'register' ? 'block' : 'none';
+            document.getElementById('authBtn').innerText = mode === 'login' ? 'Đăng Nhập' : 'Đăng Ký Tài Khoản';
+        }
+
+        async function handleAuth(e) {
+            e.preventDefault();
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            const phone = document.getElementById('authPhone').value;
+            const url = authMode === 'login' ? '/api/login' : '/api/register';
+            const body = authMode === 'login' ? { email, password } : { email, password, phone, refBy: new URLSearchParams(window.location.search).get('ref') };
+
+            const res = await fetch(API_URL + url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            const data = await res.json();
+            if(!res.ok) return alert(data.error);
+
+            currentUser = data.user;
+            document.getElementById('authContainer').style.display = 'none';
+            initSystem();
+        }
+
+        function initSystem() {
+            document.getElementById('userDisplay').innerText = `${currentUser.email} (${currentUser.role.toUpperCase()})`;
+            if(currentUser.role === 'admin') {
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+            }
+            // Điền link ref
+            document.getElementById('refLinkInput').value = `${window.location.origin}?ref=${currentUser.email}`;
+            
+            // Tải dữ liệu các phòng ban
+            loadDashboard();
+            loadLinks();
+            loadWithdrawals();
+            loadChat();
+            setInterval(loadChat, 3000); // Tự động load chat mỗi 3s
+            if(currentUser.role === 'admin') loadAdminPanel();
+        }
+
+        function showPage(pageId, btn) {
+            document.querySelectorAll('.main-page').forEach(p => p.classList.remove('active-page'));
+            document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active-page');
+            btn.classList.add('active');
+            document.getElementById('sidebar').classList.remove('open');
+        }
+
+        async function loadDashboard() {
+            const res = await fetch(`${API_URL}/api/user-data?email=${currentUser.email}`);
+            const data = await res.json();
+            document.getElementById('statLinks').innerText = data.completedLinks;
+            document.getElementById('statMoney').innerText = data.balance.toLocaleString() + 'đ';
+            document.getElementById('statRefMoney').innerText = data.refBalance.toLocaleString() + 'đ';
+            document.getElementById('adminNoticeText').innerText = data.notice;
+
+            // Nạp profile
+            document.getElementById('profileEmail').value = data.email;
+            document.getElementById('profilePhone').value = data.phone;
+            document.getElementById('profileBank').value = data.bankInfo;
+            if(data.bankInfo) {
+                document.getElementById('profileBank').disabled = true;
+                document.getElementById('btnSaveProfile').style.display = 'none';
+            }
+
+            // Nạp bảng thống kê ngày giả lập
+            document.getElementById('dailyStatsTable').innerHTML = `<tr><td>Hôm nay</td><td>${data.completedLinks}</td><td>${(data.completedLinks * 3000).toLocaleString()}đ</td><td>${data.balance.toLocaleString()}đ</td></tr>`;
+        }
+
+        async function saveProfile() {
+            const bankInfo = document.getElementById('profileBank').value;
+            const res = await fetch(`${API_URL}/api/save-bank`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: currentUser.email, bankInfo }) });
+            if(res.ok) { alert('Đã khóa lưu thông tin ngân hàng thành công!'); loadDashboard(); }
+        }
+
+        async function loadLinks() {
+            const res = await fetch(`${API_URL}/api/links`);
+            const links = await res.json();
+            let html = '';
+            links.forEach(l => {
+                html += `<tr><td>${l.title}</td><td style="color:var(--success)">${l.price.toLocaleString()}đ</td><td><button class="btn-action" onclick="clickLink('${l.id}', '${l.url}')">Đi tới Link</button></td></tr>`;
+            });
+            document.getElementById('linksTable').innerHTML = html;
+        }
+
+        function clickLink(id, url) {
+            activeTaskId = id;
+            window.open(url, '_blank');
+            document.getElementById('boxSubmitCode').style.display = 'block';
+        }
+
+        async function submitVerifyCode() {
+            const code = document.getElementById('verificationCodeInput').value;
+            const res = await fetch(`${API_URL}/api/verify-link`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: currentUser.email, linkId: activeTaskId, code }) });
+            const data = await res.json();
+            if(!res.ok) return alert(data.error);
+            alert('Nhập mã chuẩn! Chúc mừng bạn cộng tiền thành công.');
+            document.getElementById('boxSubmitCode').style.display = 'none';
+            document.getElementById('verificationCodeInput').value = '';
+            loadDashboard();
+        }
+
+        async function requestWithdraw() {
+            const amount = parseInt(document.getElementById('withdrawAmount').value);
+            const res = await fetch(`${API_URL}/api/withdraw`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: currentUser.email, amount }) });
+            const data = await res.json();
+            if(!res.ok) return alert(data.error);
+            alert('Gửi lệnh yêu cầu rút tiền thành công!');
+            loadWithdrawals();
+            loadDashboard();
+        }
+
+        async function loadWithdrawals() {
+            const res = await fetch(`${API_URL}/api/withdraw-history?email=${currentUser.email}`);
+            const data = await res.json();
+            let html = '';
+            data.forEach(w => {
+                html += `<tr><td>#${w.id}</td><td>${w.amount.toLocaleString()}đ</td><td><span class="status-badge status-${w.status}">${w.status.toUpperCase()}</span></td></tr>`;
+            });
+            document.getElementById('withdrawHistoryTable').innerHTML = html;
+        }
+
+        async function loadChat() {
+            const res = await fetch(`${API_URL}/api/chat`);
+            const chats = await res.json();
+            const box = document.getElementById('chatBox');
+            box.innerHTML = chats.map(c => `<div class="chat-msg ${c.email === currentUser.email ? 'me' : ''}"><div style="font-size:0.7rem; color:var(--text-muted)">${c.email}</div><div>${c.text}</div></div>`).join('');
+        }
+
+        async function sendChat() {
+            const text = document.getElementById('chatInput').value;
+            const res = await fetch(`${API_URL}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: currentUser.email, text }) });
+            if(!res.ok) { const d = await res.json(); return alert(d.error); }
+            document.getElementById('chatInput').value = '';
+            loadChat();
+        }
+
+        /* LOGIC DÀNH RIÊNG CHO ADMIN */
+        async function loadAdminPanel() {
+            const res = await fetch(`${API_URL}/api/admin/withdrawals`);
+            const data = await res.json();
+            let html = '';
+            data.forEach(w => {
+                html += `<tr><td>${w.email}</td><td>${w.amount.toLocaleString()}đ</td><td>${w.bankInfo}</td><td>
+                    <button class="btn-action" style="background:var(--success)" onclick="processWithdraw('${w.id}', 'hoanthanh')">Duyệt</button>
+                    <button class="btn-action" style="background:var(--warning)" onclick="processWithdraw('${w.id}', 'pheduyet')">Chờ</button>
+                    <button class="btn-action" style="background:var(--danger)" onclick="processWithdraw('${w.id}', 'tuchoi')">Từ chối</button>
+                </td></tr>`;
+            });
+            document.getElementById('adminWithdrawTable').innerHTML = html;
+        }
+
+        async function processWithdraw(id, status) {
+            await fetch(`${API_URL}/api/admin/withdraw-action`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }) });
+            loadAdminPanel();
+            loadDashboard();
+        }
+
+        async function addLinkByAdmin() {
+            const title = document.getElementById('adminLinkTitle').value;
+            const url = document.getElementById('adminLinkUrl').value;
+            const code = document.getElementById('adminLinkCode').value;
+            const price = parseInt(document.getElementById('adminLinkPrice').value);
+            await fetch(`${API_URL}/api/admin/add-link`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, url, code, price }) });
+            alert('Thêm link thành công!');
+            loadLinks();
+        }
+
+        async function updateNotice() {
+            const text = document.getElementById('inputNewNotice').value;
+            await fetch(`${API_URL}/api/admin/notice`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
+            alert('Đã đổi thông báo!');
+            loadDashboard();
+        }
+
+        function logout() { location.reload(); }
+    </script>
+</body>
+</html>
